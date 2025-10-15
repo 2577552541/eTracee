@@ -1,0 +1,40 @@
+0 files removed
+OS                                              1.9 MB/s | 3.1 MB     00:01    
+everything                                      9.2 MB/s |  16 MB     00:01    
+EPOL                                            6.0 MB/s | 9.2 MB     00:01    
+debuginfo                                       2.9 MB/s | 4.6 MB     00:01    
+source                                          1.1 MB/s | 1.7 MB     00:01    
+update                                          154  B/s | 241  B     00:01    
+Metadata cache created.
+Error: This command has to be run with superuser privileges (under the root user on most systems).
+34 files removed
+OS                                              2.1 MB/s | 3.1 MB     00:01    
+everything                                      7.9 MB/s |  16 MB     00:02    
+EPOL                                            5.6 MB/s | 9.2 MB     00:01    
+debuginfo                                       2.8 MB/s | 4.6 MB     00:01    
+source                                          1.2 MB/s | 1.7 MB     00:01    
+update                                          170  B/s | 241  B     00:01    
+Metadata cache created.
+Last metadata expiration check: 0:00:01 ago on 2025年10月15日 星期三 13时22分22秒.
+Package clang-17.0.6-52.oe2509.x86_64 is already installed.
+Package llvm-17.0.6-52.oe2509.x86_64 is already installed.
+Package elfutils-libelf-devel-0.193-1.oe2509.x86_64 is already installed.
+Package zlib-devel-1.3.1-1.oe2509.x86_64 is already installed.
+Package kernel-headers-6.6.0-102.0.0.8.oe2509.x86_64 is already installed.
+Package kernel-devel-6.6.0-102.0.0.8.oe2509.x86_64 is already installed.
+Package bpftool-7.2.0-2.oe2509.x86_64 is already installed.
+Package bpftrace-0.20.1-1.oe2509.x86_64 is already installed.
+Package bcc-tools-0.29.1-4.oe2509.x86_64 is already installed.
+Package python3-3.11.13-2.oe2509.x86_64 is already installed.
+Package python3-pip-23.3.1-4.oe2509.noarch is already installed.
+Package golang-1.24.2-35.oe2509.x86_64 is already installed.
+Package git-2.50.1-1.oe2509.x86_64 is already installed.
+Package make-1:4.4.1-3.oe2509.x86_64 is already installed.
+Package gcc-12.3.1-98.oe2509.x86_64 is already installed.
+Package gcc-c++-12.3.1-98.oe2509.x86_64 is already installed.
+Package sqlite-3.50.3-1.oe2509.x86_64 is already installed.
+Package sqlite-devel-3.50.3-1.oe2509.x86_64 is already installed.
+Package docker-engine-2:18.09.0-347.oe2509.x86_64 is already installed.
+Dependencies resolved.
+Nothing to do.
+Complete!

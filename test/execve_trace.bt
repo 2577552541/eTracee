@@ -1,0 +1,5 @@
+#!/usr/bin/env bpftrace
+tracepoint:syscalls:sys_enter_execve
+{
+    printf("%s -> %s\n", comm, str(args->filename));
+}
