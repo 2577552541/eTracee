@@ -1,21 +1,19 @@
-0 files removed
-OS                                              1.9 MB/s | 3.1 MB     00:01    
-everything                                      9.2 MB/s |  16 MB     00:01    
-EPOL                                            6.0 MB/s | 9.2 MB     00:01    
-debuginfo                                       2.9 MB/s | 4.6 MB     00:01    
-source                                          1.1 MB/s | 1.7 MB     00:01    
-update                                          154  B/s | 241  B     00:01    
-Metadata cache created.
-Error: This command has to be run with superuser privileges (under the root user on most systems).
+=== eTracee 环境初始化开始... ===
+日志文件: /home/zwc/Desktop/eTracee/setup-ebpf.log
+当前路径: /home/zwc/Desktop/eTracee
+系统: openEuler 25.09
+内核: 6.6.0-102.0.0.8.oe2509.x86_64
+更新 dnf 缓存...
 34 files removed
-OS                                              2.1 MB/s | 3.1 MB     00:01    
-everything                                      7.9 MB/s |  16 MB     00:02    
-EPOL                                            5.6 MB/s | 9.2 MB     00:01    
-debuginfo                                       2.8 MB/s | 4.6 MB     00:01    
-source                                          1.2 MB/s | 1.7 MB     00:01    
-update                                          170  B/s | 241  B     00:01    
+OS                                              777 kB/s | 3.1 MB     00:04    
+everything                                      1.6 MB/s |  16 MB     00:10    
+EPOL                                            1.6 MB/s | 9.2 MB     00:05    
+debuginfo                                       1.4 MB/s | 4.6 MB     00:03    
+source                                          529 kB/s | 1.7 MB     00:03    
+update                                          105  B/s | 241  B     00:02    
 Metadata cache created.
-Last metadata expiration check: 0:00:01 ago on 2025年10月15日 星期三 13时22分22秒.
+安装 eBPF 所需依赖...
+Last metadata expiration check: 0:00:02 ago on 2025年10月15日 星期三 22时29分39秒.
 Package clang-17.0.6-52.oe2509.x86_64 is already installed.
 Package llvm-17.0.6-52.oe2509.x86_64 is already installed.
 Package elfutils-libelf-devel-0.193-1.oe2509.x86_64 is already installed.
@@ -34,7 +32,26 @@ Package gcc-12.3.1-98.oe2509.x86_64 is already installed.
 Package gcc-c++-12.3.1-98.oe2509.x86_64 is already installed.
 Package sqlite-3.50.3-1.oe2509.x86_64 is already installed.
 Package sqlite-devel-3.50.3-1.oe2509.x86_64 is already installed.
-Package docker-engine-2:18.09.0-347.oe2509.x86_64 is already installed.
 Dependencies resolved.
 Nothing to do.
 Complete!
+依赖安装完成。
+检查关键工具版本...
+clang: clang version 17.0.6 ( 17.0.6-52.oe2509)
+bpftool: bpftool v7.2.0
+bpftrace: bpftrace v0.20.1
+python3: Python 3.11.13
+go: go version go1.24.2 linux/amd64
+sqlite3: 3.50.3 2025-07-17 13:25:10 3ce993b8657d6d9deda380a93cdd6404a8c8ba1b185b2bc423703e41ae5falt1 (64-bit)
+检查内核 eBPF 支持...
+内核支持 eBPF。
+初始化 test 目录...
+样例文件已创建于 /home/zwc/Desktop/eTracee/test
+执行 bpftrace 自动化功能验证（非交互，捕获 6 秒）...
+测试日志将写入 /home/zwc/Desktop/eTracee/test/test_result.log
+started bpftrace with pid 7265
+[?]未在日志中匹配到 execve 输出，可能由于 flush 延迟或缓冲问题。
+请手动验证: sudo bpftrace test/execve_trace.bt & bash test/trigger_exec.sh
+自动测试完成。所有测试文件、脚本和日志均保存在 /home/zwc/Desktop/eTracee/test
+测试日志: /home/zwc/Desktop/eTracee/test/test_result.log
+=== eTracee-China 环境初始化完成 ===
