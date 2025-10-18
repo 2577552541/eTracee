@@ -1,46 +1,51 @@
+// eTracee - 基于eBPF的系统调用监控工具用户态程序
+// 负责加载eBPF程序、接收内核事件并进行JSON格式化输出
 package main
 
 import (
-	"bytes"
-	"context"
-	"encoding/binary"
-	"fmt"
-	"log"
-	"os"
-	"os/signal"
-	"strconv"
-	"strings"
-	"syscall"
-	"time"
-	"unsafe"
+	"bytes"           // 字节缓冲区操作
+	"context"         // 上下文管理
+	"encoding/binary" // 二进制数据编码解码
+	"fmt"             // 格式化输出
+	"log"             // 日志记录
+	"os"              // 操作系统接口
+	"os/signal"       // 信号处理
+	"strconv"         // 字符串转换
+	"strings"         // 字符串操作
+	"syscall"         // 系统调用常量
+	"time"            // 时间处理
+	"unsafe"          // 不安全指针操作
 
-	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/ringbuf"
-	"github.com/cilium/ebpf/rlimit"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/cilium/ebpf"        // eBPF程序加载和管理
+	"github.com/cilium/ebpf/link"   // eBPF程序链接到内核
+	"github.com/cilium/ebpf/ringbuf" // Ring Buffer数据读取
+	"github.com/cilium/ebpf/rlimit"  // 内存限制管理
+	jsoniter "github.com/json-iterator/go" // 高性能JSON序列化
 )
 
-// Event 表示从eBPF程序接收到的事件 - 必须与eBPF中的struct event完全匹配
+// Event 表示从eBPF程序接收到的事件结构体
+// 必须与eBPF中的struct event完全匹配，确保内存布局一致
 type Event struct {
-	Timestamp uint64    `json:"timestamp"`
-	PID       uint32    `json:"pid"`
-	PPID      uint32    `json:"ppid"`
-	UID       uint32    `json:"uid"`
-	GID       uint32    `json:"gid"`
-	EventType uint32    `json:"event_type"`
-	Comm      [16]byte  `json:"-"`
-	Filename  [256]byte `json:"-"`
-	SyscallNr uint32    `json:"syscall_nr"`
-	RetCode   int32     `json:"ret_code"`
+	Timestamp uint64    `json:"timestamp"` // 事件时间戳（纳秒，基于系统启动时间）
+	PID       uint32    `json:"pid"`       // 进程ID
+	PPID      uint32    `json:"ppid"`      // 父进程ID
+	UID       uint32    `json:"uid"`       // 用户ID
+	GID       uint32    `json:"gid"`       // 组ID
+	EventType uint32    `json:"event_type"` // 事件类型标识符
+	Comm      [16]byte  `json:"-"`         // 进程名称（固定16字节，不序列化到JSON）
+	Filename  [256]byte `json:"-"`        // 文件名（固定256字节，不序列化到JSON）
+	SyscallNr uint32    `json:"syscall_nr"` // 系统调用号
+	RetCode   int32     `json:"ret_code"`   // 系统调用返回值
 	
-	// 扩展数据字段 - 与 eBPF 中的 union 对应
+	// 扩展数据字段 - 与 eBPF 中的 union data 对应
 	Data EventData `json:"data"`
 }
 
-// EventData 对应 eBPF 中的 union data - 使用原始字节数组来匹配union
+// EventData 对应 eBPF 中的 union data 结构
+// 使用原始字节数组来匹配union的内存布局，确保数据正确传递
 type EventData struct {
 	// 使用32字节的原始数据来匹配eBPF中的union (4 * uint64 = 32字节)
+	// 不同事件类型会将不同的数据结构存储在这个union中
 	RawData [4]uint64 `json:"-"`
 }
 
@@ -63,7 +68,9 @@ type EventOutput struct {
 	Data        map[string]interface{} `json:"data"`
 }
 
-// 将字节数组转换为字符串
+// bytesToString 将字节数组转换为字符串
+// 遇到null字符（\0）时停止转换，这是C风格字符串的标准处理方式
+// 用于处理从eBPF传递的固定长度字符数组（如进程名、文件名）
 func bytesToString(b []byte) string {
 	n := 0
 	for i, v := range b {
@@ -78,54 +85,57 @@ func bytesToString(b []byte) string {
 	return string(b[:n])
 }
 
-// 获取事件名称
+// getEventName 根据事件类型ID返回对应的事件名称
+// 事件类型常量与eBPF程序中的EVENT_*定义保持一致
 func getEventName(eventType uint32) string {
 	switch eventType {
 	// 原有事件类型
-	case 1: // EVENT_EXECVE
+	case 1: // EVENT_EXECVE - 进程执行事件
 		return "execve"
-	case 2: // EVENT_OPENAT
+	case 2: // EVENT_OPENAT - 文件打开事件
 		return "openat"
-	case 3: // EVENT_CONNECT
+	case 3: // EVENT_CONNECT - 网络连接事件
 		return "connect"
 	
 	// 新增事件类型
-	case 4: // EVENT_MMAP
+	case 4: // EVENT_MMAP - 内存映射事件
 		return "mmap"
-	case 5: // EVENT_MPROTECT
+	case 5: // EVENT_MPROTECT - 内存保护修改事件
 		return "mprotect"
-	case 6: // EVENT_SETUID
+	case 6: // EVENT_SETUID - 用户ID设置事件
 		return "setuid"
-	case 7: // EVENT_SETGID
+	case 7: // EVENT_SETGID - 组ID设置事件
 		return "setgid"
-	case 8: // EVENT_CLONE
+	case 8: // EVENT_CLONE - 进程克隆事件
 		return "clone"
-	case 9: // EVENT_PTRACE
+	case 9: // EVENT_PTRACE - 进程调试事件
 		return "ptrace"
-	case 10: // EVENT_MOUNT
+	case 10: // EVENT_MOUNT - 文件系统挂载事件
 		return "mount"
-	case 11: // EVENT_UNLINK
+	case 11: // EVENT_UNLINK - 文件删除事件
 		return "unlink"
-	case 12: // EVENT_SOCKET
+	case 12: // EVENT_SOCKET - Socket创建事件
 		return "socket"
-	case 13: // EVENT_BIND
+	case 13: // EVENT_BIND - Socket绑定事件
 		return "bind"
-	case 14: // EVENT_LISTEN
+	case 14: // EVENT_LISTEN - Socket监听事件
 		return "listen"
-	case 15: // EVENT_ACCEPT
+	case 15: // EVENT_ACCEPT - Socket接受连接事件
 		return "accept"
-	case 18: // EVENT_INIT_MODULE
+	case 18: // EVENT_INIT_MODULE - 内核模块加载事件
 		return "init_module"
-	case 19: // EVENT_DELETE_MODULE
+	case 19: // EVENT_DELETE_MODULE - 内核模块卸载事件
 		return "delete_module"
-	case 20: // EVENT_PRCTL
+	case 20: // EVENT_PRCTL - 进程控制事件
 		return "prctl"
 	default:
-		return fmt.Sprintf("event_%d", eventType)
+		return fmt.Sprintf("event_%d", eventType) // 未知事件类型
 	}
 }
 
-// 格式化时间戳
+// formatTimestamp 将纳秒时间戳转换为可读的时间格式
+// 注意：eBPF中的时间戳通常是基于系统启动时间的纳秒数（bpf_ktime_get_ns）
+// 需要结合系统运行时间来计算实际的时间戳
 func formatTimestamp(timestamp uint64) string {
 	// bpf_ktime_get_ns() 返回的是系统启动后的纳秒数，需要转换为实际时间
 	now := time.Now()
@@ -139,13 +149,19 @@ func formatTimestamp(timestamp uint64) string {
 		eventTime := systemBootTime.Add(time.Duration(timestamp))
 		return eventTime.Format("2006-01-02 15:04:05.000000")
 	} else {
-		// 如果无法获取系统运行时间，使用当前时间
+		// 如果无法获取系统运行时间，使用当前时间作为备选方案
 		return now.Format("2006-01-02 15:04:05.000000")
 	}
 }
 
-// 获取系统运行时间（秒）
+// getSystemUptime 获取系统运行时间（秒）
+// 通过读取/proc/uptime文件获取系统启动后的运行时间
+// 用于将eBPF时间戳转换为实际时间
+
+
 // parseEventData 根据事件类型解析union数据
+// 将eBPF传递的原始数据解析为具体的事件参数
+// 不同事件类型有不同的数据结构和含义
 func parseEventData(eventType uint32, rawData [4]uint64) map[string]interface{} {
 	data := make(map[string]interface{})
 	
