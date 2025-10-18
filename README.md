@@ -77,9 +77,11 @@ sudo yum install -y clang llvm libbpf-devel bpftool
 ### 编译安装
 
 ```bash
-# 克隆项目
+# 克隆项目 && 安装依赖
 git clone https://github.com/2577552541/eTracee.git
 cd eTracee
+chmod +x ./setup-ebpf.sh
+bash ./setup-ebpf.sh
 
 # 一键构建
 make
@@ -122,8 +124,6 @@ eTracee/
 │       ├── go.mod             # Go模块依赖
 │       ├── go.sum             # 依赖校验文件
 │       └── main.go            # 主程序文件
-├── docs/                       # 技术文档
-│   └── week1-2-implementation.md
 ├── test/                       # 测试脚本
 │   ├── execve_trace.bt        # bpftrace测试脚本
 │   ├── ingest_realtime.py     # Python数据采集器
